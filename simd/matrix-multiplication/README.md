@@ -73,6 +73,22 @@ vecTmult_Avx256Singles   :   5.25 cycles, avg   5.53 cycles,  560.282 MOPS
 vecTmult_TransFma256     :   2.83 cycles, avg   2.89 cycles, 1073.570 MOPS
 ```
 
+### Benchmark - Qualcomm Technologies, Inc SDM439 @ 2.016GHz :
+
+```
+matmult_ref              : 144.21 cycles, avg 147.32 cycles,   13.554 MOPS
+matmult_novec            : 208.20 cycles, avg 215.46 cycles,    9.313 MOPS
+matmult_Neon             :  94.99 cycles, avg  98.11 cycles,   20.492 MOPS
+matmult_NeonPar2         :  52.17 cycles, avg  54.15 cycles,   37.077 MOPS
+vecmult_ref              :  51.93 cycles, avg  54.09 cycles,   37.105 MOPS
+vecmult_novec            :  88.16 cycles, avg  89.91 cycles,   22.357 MOPS
+vecmult_Neon             :  22.58 cycles, avg  22.67 cycles,   88.722 MOPS
+vecmult_NeonPar2         :  15.81 cycles, avg  15.96 cycles,  126.015 MOPS
+vecTmult_ref             :  83.12 cycles, avg  83.29 cycles,   24.140 MOPS
+vecTmult_Neon            :  21.47 cycles, avg  21.55 cycles,   93.359 MOPS
+vecTmult_NeonPar2        :  15.63 cycles, avg  15.90 cycles,  126.531 MOPS
+```
+
 ### Benchmark - Genuine Intel(R) CPU U7300  @ 1.30GHz :
 
 Ultra low voltage from 2010.
