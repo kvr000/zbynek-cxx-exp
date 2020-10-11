@@ -1,4 +1,4 @@
-# Matrix multiplication benchmark for x86\_64
+# Matrix multiplication benchmark for various architectures
 
 Benchmarking speed of various SIMD based algorithms to calculate matrix 4\*4 multiplication and vector 4 array by matrix 4\*4 multiplication.
 
@@ -87,6 +87,77 @@ vecmult_NeonPar2         :  15.81 cycles, avg  15.96 cycles,  126.015 MOPS
 vecTmult_ref             :  83.12 cycles, avg  83.29 cycles,   24.140 MOPS
 vecTmult_Neon            :  21.47 cycles, avg  21.55 cycles,   93.359 MOPS
 vecTmult_NeonPar2        :  15.63 cycles, avg  15.90 cycles,  126.531 MOPS
+```
+
+### Benchmark - Intel(R) Xeon(R) Platinum 8275CL CPU @ 3.00GHz :
+
+```
+matmult_ref              :  15.84 cycles, avg  15.94 cycles,  188.207 MOPS
+matmult_novec            :  56.88 cycles, avg  57.03 cycles,   52.603 MOPS
+matmult_Fpu87            :  85.14 cycles, avg  85.98 cycles,   34.893 MOPS
+matmult_Sse              :  15.92 cycles, avg  16.06 cycles,  186.811 MOPS
+matmult_Avx4Mem          :  13.52 cycles, avg  13.62 cycles,  220.327 MOPS
+matmult_Avx8             :  10.38 cycles, avg  10.43 cycles,  287.501 MOPS
+matmult_Fma              :  14.41 cycles, avg  14.60 cycles,  205.510 MOPS
+matmult_FmaExp           :  14.69 cycles, avg  14.81 cycles,  202.552 MOPS
+matmult_Fma256Exp        :  10.36 cycles, avg  10.42 cycles,  288.015 MOPS
+matmult_Fma256Pre        :  10.36 cycles, avg  10.46 cycles,  286.791 MOPS
+matmult_Avx512           :   8.01 cycles, avg   8.06 cycles,  372.089 MOPS
+vecmult_ref              :   2.98 cycles, avg   3.01 cycles,  995.246 MOPS
+vecmult_novec            :   7.58 cycles, avg   7.60 cycles,  394.521 MOPS
+vecmult_Fpu87            :  15.38 cycles, avg  15.83 cycles,  189.478 MOPS
+vecmult_Sse              :   3.68 cycles, avg   3.71 cycles,  809.488 MOPS
+vecmult_SsePar2          :   4.03 cycles, avg   4.04 cycles,  742.972 MOPS
+vecmult_FmaExp           :   3.09 cycles, avg   3.10 cycles,  968.051 MOPS
+vecmult_Fma256Exp        :   2.10 cycles, avg   2.11 cycles, 1420.621 MOPS
+vecmult_Avx512           :   1.44 cycles, avg   1.47 cycles, 2041.647 MOPS
+vecTmult_ref             :   3.09 cycles, avg   3.10 cycles,  966.410 MOPS
+vecTmult_SseSingles      :   5.30 cycles, avg   5.33 cycles,  562.521 MOPS
+vecTmult_Avx256Singles   :   4.74 cycles, avg   4.80 cycles,  624.919 MOPS
+vecTmult_TransFma256     :   2.67 cycles, avg   2.68 cycles, 1118.091 MOPS
+vecTmult_Avx512Singles   :   6.03 cycles, avg   6.29 cycles,  477.300 MOPS
+```
+
+### Benchmark - AMD EPYC 7R32 @ 2.8GHz :
+
+```
+matmult_ref              :  13.71 cycles, avg  14.27 cycles,  196.140 MOPS
+matmult_novec            :  54.74 cycles, avg  56.92 cycles,   49.190 MOPS
+matmult_Fpu87            :  98.33 cycles, avg 100.74 cycles,   27.794 MOPS
+matmult_Sse              :  13.54 cycles, avg  14.05 cycles,  199.242 MOPS
+matmult_Avx4Mem          :  16.02 cycles, avg  16.44 cycles,  170.261 MOPS
+matmult_Avx8             :   9.69 cycles, avg  10.28 cycles,  272.244 MOPS
+matmult_Fma              :  14.44 cycles, avg  15.34 cycles,  182.527 MOPS
+matmult_FmaExp           :  14.27 cycles, avg  14.65 cycles,  191.113 MOPS
+matmult_Fma256Exp        :  10.87 cycles, avg  11.22 cycles,  249.466 MOPS
+matmult_Fma256Pre        :  10.69 cycles, avg  11.24 cycles,  249.078 MOPS
+vecmult_ref              :   2.42 cycles, avg   2.48 cycles, 1128.754 MOPS
+vecmult_novec            :   9.00 cycles, avg   9.17 cycles,  305.380 MOPS
+vecmult_Fpu87            :  24.12 cycles, avg  24.54 cycles,  114.075 MOPS
+vecmult_Sse              :   3.38 cycles, avg   3.42 cycles,  818.452 MOPS
+vecmult_SsePar2          :   3.37 cycles, avg   3.41 cycles,  821.868 MOPS
+vecmult_FmaExp           :   2.75 cycles, avg   2.87 cycles,  974.379 MOPS
+vecmult_Fma256Exp        :   1.94 cycles, avg   2.00 cycles, 1399.290 MOPS
+vecTmult_ref             :   2.39 cycles, avg   2.41 cycles, 1161.737 MOPS
+vecTmult_SseSingles      :   5.65 cycles, avg   5.73 cycles,  488.236 MOPS
+vecTmult_Avx256Singles   :   4.79 cycles, avg   4.88 cycles,  573.806 MOPS
+vecTmult_TransFma256     :   2.10 cycles, avg   2.18 cycles, 1286.653 MOPS
+```
+
+### Benchmark - Graviton2 :
+
+```
+matmult_ref              :  37.84 cycles, avg  38.37 cycles,   65.017 MOPS
+matmult_novec            :  51.88 cycles, avg  53.21 cycles,   46.966 MOPS
+matmult_Neon             :  13.43 cycles, avg  14.19 cycles,  176.208 MOPS
+matmult_NeonPar2         :  13.43 cycles, avg  14.18 cycles,  176.331 MOPS
+vecmult_ref              :   7.02 cycles, avg   7.11 cycles,  351.793 MOPS
+vecmult_novec            :  10.60 cycles, avg  10.69 cycles,  233.958 MOPS
+vecmult_Neon             :   3.51 cycles, avg   3.56 cycles,  702.897 MOPS
+vecmult_NeonPar2         :   3.36 cycles, avg   3.46 cycles,  721.872 MOPS
+vecTmult_ref             :   6.94 cycles, avg   6.98 cycles,  358.082 MOPS
+vecTmult_Neon            :   4.88 cycles, avg   4.92 cycles,  508.234 MOPS
+vecTmult_NeonPar2        :   4.81 cycles, avg   4.93 cycles,  507.268 MOPS
 ```
 
 ### Benchmark - Genuine Intel(R) CPU U7300  @ 1.30GHz :
