@@ -21,8 +21,9 @@ union Mat44 {
 #ifndef NO_VECTORIZE
 #ifdef __x86_64__
 	__m128 row[4];
-	__m256 rowDuet[2];
-	__m512 rowQuad;
+	// avoid wider register due to possible alignment wrong expectations
+	//__m256 rowDuet[2];
+	//__m512 rowQuad;
 #endif
 #ifdef __aarch64__
 	float32x4_t row[4];

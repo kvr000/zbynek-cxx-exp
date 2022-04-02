@@ -144,6 +144,37 @@ vecTmult_Avx256Singles   :   4.79 cycles, avg   4.88 cycles,  573.806 MOPS
 vecTmult_TransFma256     :   2.10 cycles, avg   2.18 cycles, 1286.653 MOPS
 ```
 
+### Benchmark - Intel(R) Core(TM) i7-1185G7 @ 3.00GHz
+
+clang version 13.0.0-2
+
+```
+matmult_ref              :  22.27 cycles, avg  24.28 cycles,  197.229 MOPS
+matmult_novec            :  57.42 cycles, avg  58.07 cycles,   82.652 MOPS
+matmult_Fpu87            :  75.00 cycles, avg  90.17 cycles,   53.231 MOPS
+matmult_Sse              :  15.23 cycles, avg  16.39 cycles,  292.763 MOPS
+matmult_Avx4Mem          :  15.23 cycles, avg  16.59 cycles,  288.668 MOPS
+matmult_Avx8             :   9.38 cycles, avg  10.97 cycles,  437.376 MOPS
+matmult_Fma              :  15.23 cycles, avg  16.02 cycles,  299.671 MOPS
+matmult_FmaExp           :  14.06 cycles, avg  16.85 cycles,  284.885 MOPS
+matmult_Fma256Exp        :   8.20 cycles, avg   9.51 cycles,  504.978 MOPS
+matmult_Fma256Pre        :   8.20 cycles, avg   9.48 cycles,  506.191 MOPS
+matmult_Avx512           :   7.03 cycles, avg   7.66 cycles,  626.281 MOPS
+vecmult_ref              :   3.96 cycles, avg   4.15 cycles, 1156.402 MOPS
+vecmult_novec            :  14.36 cycles, avg  14.54 cycles,  330.136 MOPS
+vecmult_Fpu87            :  22.85 cycles, avg  23.10 cycles,  207.771 MOPS
+vecmult_Sse              :   5.57 cycles, avg   5.81 cycles,  825.581 MOPS
+vecmult_SsePar2          :   3.52 cycles, avg   3.87 cycles, 1241.249 MOPS
+vecmult_FmaExp           :   2.93 cycles, avg   3.15 cycles, 1522.511 MOPS
+vecmult_Fma256Exp        :   2.05 cycles, avg   2.26 cycles, 2124.546 MOPS
+vecmult_Avx512           :   1.46 cycles, avg   1.69 cycles, 2846.387 MOPS
+vecTmult_ref             :   3.96 cycles, avg   4.21 cycles, 1140.885 MOPS
+vecTmult_SseSingles      :   6.15 cycles, avg   6.42 cycles,  747.530 MOPS
+vecTmult_Avx256Singles   :   5.13 cycles, avg   5.32 cycles,  902.880 MOPS
+vecTmult_TransFma256     :   2.78 cycles, avg   2.99 cycles, 1607.395 MOPS
+vecTmult_Avx512Singles   :   6.45 cycles, avg   6.67 cycles,  719.699 MOPS
+```
+
 ### Benchmark - Graviton2 :
 
 ```

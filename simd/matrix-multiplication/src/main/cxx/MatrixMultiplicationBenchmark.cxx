@@ -420,7 +420,7 @@ void vecmult_Avx512(Vector4 *out, const Vector4 *in, size_t count, const Mat44 &
 
 void vecTmult_Avx512Singles(Vector4 *out, const Mat44 &m, const Vector4 *in, size_t count)
 {
-	__m512 a0123 = _mm512_loadu_ps(m.m);
+	__m512 a0123 = _mm512_loadu_ps((float *)(uintptr_t)&m.m[0][0]);
 	__m512 a0213 = _mm512_insertf32x4(_mm512_insertf32x4(a0123, _mm512_extractf32x4_ps(a0123, 2), 1), _mm512_extractf32x4_ps(a0123, 1), 2);
 
 	for (size_t c = 0; c < count; c += 1) {
@@ -696,7 +696,7 @@ static uint64_t cpuFrequency;
 
 long readTicks()
 {
-#if (defined __x86_64__)
+#if (defined __x86_64__) && 0
 	{
 		long timer = __rdtsc();
 		if (timer != 0) {
@@ -707,36 +707,18 @@ long readTicks()
 	if (cpuFrequency == 0) {
 #ifdef __linux__
 		try {
-			std::ifstream cpuInfoFd("/proc/cpuinfo");
-			const std::regex keyValueRegex("^([^:]+?)\\s*:\\s*(.*?)\\s*$");
+			std::ifstream cpuInfoFd("/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq");
+			const std::regex keyValueRegex("^(\\d+(?:\\.\\d*)?)$");
 			for (std::string line; getline(cpuInfoFd, line); ) {
 				std::smatch match;
 				if (std::regex_match(line, match, keyValueRegex)) {
-					if (match[1] == "cpu MHz") {
-						cpuFrequency = (uint64_t)(stod(match[2], NULL)*1000000);
-						break;
-					}
+					cpuFrequency = (uint64_t)(stod(match[1], NULL)*1000);
+					break;
 				}
 			}
 		}
 		catch (...) {
-			fprintf(stderr, "Failed to read /proc/cpuinfo\n");
-		}
-		if (cpuFrequency == 0) {
-			try {
-				std::ifstream cpuInfoFd("/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq");
-				const std::regex keyValueRegex("^(\\d+(?:\\.\\d*)?)$");
-				for (std::string line; getline(cpuInfoFd, line); ) {
-					std::smatch match;
-					if (std::regex_match(line, match, keyValueRegex)) {
-						cpuFrequency = (uint64_t)(stod(match[1], NULL)*1000);
-						break;
-					}
-				}
-			}
-			catch (...) {
-				fprintf(stderr, "Failed to read /proc/cpuinfo\n");
-			}
+			fprintf(stderr, "Failed to read /sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq\n");
 		}
 #elif __APPLE__
 
@@ -761,7 +743,7 @@ long readTicks()
 		}
 #endif
 		if (cpuFrequency != 0) {
-			fprintf(stderr, "Found CPU Frequency %.3f\n", (double) cpuFrequency);
+			fprintf(stderr, "Found CPU Frequency %.0f\n", (double) cpuFrequency);
 		}
 		else {
 			cpuFrequency = 2500000000;
