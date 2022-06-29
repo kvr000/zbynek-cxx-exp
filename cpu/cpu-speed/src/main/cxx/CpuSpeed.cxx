@@ -8,6 +8,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <regex>
 #include <array>
 
 using namespace std;
@@ -203,9 +204,9 @@ void runIncMov32(long loops)
 				"mov %w4, %w5\n" \
 				"add %w6, %w6, 1\n" \
 				"mov %w7, %w8\n" \
-				"add %w9, %w9, 1\n"
+				"add %w9, %w9, 1\n" \
 				"mov %w0, %w1\n" \
-				"add %w2, %w2, 1\n"
+				"add %w2, %w2, 1\n" \
 				"mov %w3, %w4\n"
 #else
 # error Unsupported platform
@@ -258,9 +259,9 @@ void runIncMov64(long loops)
 				"mov %4, %5\n" \
 				"add %6, %6, 1\n" \
 				"mov %7, %8\n" \
-				"add %9, %9, 1\n"
+				"add %9, %9, 1\n" \
 				"mov %0, %1\n" \
-				"add %2, %2, 1\n"
+				"add %2, %2, 1\n" \
 				"mov %3, %4\n"
 #else
 # error Unsupported platform
@@ -302,32 +303,78 @@ string pipeExec(const char *command)
 
 double getCpuClock()
 {
-#if (defined __DARWIN_C_LEVEL)
-	string output = pipeExec("sysctl hw.cpufrequency");
-	for (const char *c = output.c_str(); *c; ++c) {
-		if (isdigit(*c)) {
-			return strtod(c, NULL);
+	static double cpuFrequency;
+
+	if (cpuFrequency == 0) {
+#ifdef __linux__
+		try {
+			std::ifstream cpuInfoFd("/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq");
+			const std::regex keyValueRegex("^(\\d+(?:\\.\\d*)?)$");
+			for (std::string line; getline(cpuInfoFd, line); ) {
+				std::smatch match;
+				if (std::regex_match(line, match, keyValueRegex)) {
+					cpuFrequency = (uint64_t)(stod(match[1], NULL)*1000);
+					break;
+				}
+			}
 		}
-	}
-	throw std::runtime_error(string("Cannot read frequency from: ")+output);
-#elif (defined __linux__)
-	string output = pipeExec("lscpu | grep '^CPU max MHz:'");
-	for (const char *c = output.c_str(); *c; ++c) {
-		if (isdigit(*c)) {
-			return strtod(c, NULL)*1000000;
+		catch (...) {
+			fprintf(stderr, "Failed to read /sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq\n");
 		}
-	}
-	try {
-		throw std::runtime_error(string("Cannot read frequency from: ")+output);
-	}
-	catch (std::runtime_error &ex) {
-		std::cerr << ex.what() << "\n";
-		// let keep something reasonable here for modern CPU:
-		return 2500000000.0;
-	}
-#else
-# error Unsupported platform
+#elif __APPLE__
+
+		if (cpuFrequency == 0) {
+			FILE *sysctlFd = popen("sysctl hw.cpufrequency", "r");
+			if (sysctlFd != NULL) {
+				const std::regex keyValueRegex("^([^:]+?)\\s*:\\s*(.*?)\\s*$");
+				char buf[1024];
+				while (fgets(buf, sizeof(buf)-1, sysctlFd) != NULL) {
+					buf[sizeof(buf)-1] = '\0';
+					std::smatch match;
+					if (std::regex_match(std::string(buf), match, keyValueRegex)) {
+						if (match[1] == "hw.cpufrequency") {
+							cpuFrequency = (uint64_t)(stod(match[2], NULL));
+							break;
+						}
+					}
+				}
+				pclose(sysctlFd);
+			}
+			else {
+				fprintf(stderr, "Failed to read sysctl hw.cpufrequency |\n");
+			}
+		}
+		if (cpuFrequency == 0) {
+			FILE *powerFd = popen("sudo powermetrics -s cpu_power -n 1", "r");
+			if (powerFd != NULL) {
+				const std::regex keyValueRegex("^CPU \\d+ active residency:.*(?:\\s+|\\()(\\d+(?:\\.\\d+)?)\\s+MHz:.*\\s*$");
+				char buf[1024];
+				while (fgets(buf, sizeof(buf)-1, powerFd) != NULL) {
+					buf[sizeof(buf)-1] = '\0';
+					std::smatch match;
+					if (std::regex_match(std::string(buf), match, keyValueRegex)) {
+						uint64_t frequency = (uint64_t)(stod(match[1], NULL))*1000000;
+						if (frequency > cpuFrequency)
+							cpuFrequency = frequency;
+					}
+				}
+				pclose(powerFd);
+			}
+			else {
+				fprintf(stderr, "Failed to read sudo powermetrics -s cpu_power -n 1");
+			}
+		}
 #endif
+		if (cpuFrequency != 0) {
+			fprintf(stderr, "Found CPU Frequency %.0f\n", (double) cpuFrequency);
+		}
+		else {
+			cpuFrequency = 2500000000;
+			fprintf(stderr, "Failed to find CPU frequency, defaulting to %.3f\n", (double) cpuFrequency);
+		}
+	}
+
+	return cpuFrequency;
 }
 
 void runTickBenchmark(const char *name, long batchSize, void (*benchmark)())

@@ -47,8 +47,29 @@ Observations:
 - For ARM64, vaddvq\_f32 seems to be good enough to eliminate disadvantages of column-major matrix, performing similarly to row-major matrix multiplication.  This may change with SVE or SVE2 though.
 - Compiler (depending on version and brand) may require some help in order to expand loops and not to worry about overwriting output and input memory.  In some cases, Par2 versions interlacing vector calculations can give 80% boost.  This could be further optimized manually if separating inputs is not enough for compiler to interlace calculations of two or more vectors.
 - Comparing x86\_64 and aarch64, vfmaq\_laneq\_f32 (FMLA with lane instruction) brings benefit which x86\_64 is terribly missing.  Not only it saves instructions but it also saves temporary registers and allows computing full matrix multiplication in just eleven registers while still interlacing the rows in parallel, therefore naturally avoiding execution conflicts.  On the other hand, x86\_64 makes it easy to take operation argument directly from memory with little to no penalty which makes pre-fetching arguments less important.
+- aarch64 by desktop Apple M1 Pro is narrow winner among all measured CPUs while aarch64 by server Amazon Graviton2 is actually 2.5 times slower per clock.  Comparing ref and novec, it seems M1 Pro is much better in SIMD parallelization than Graviton2.
+- aarch64 tested CPUs kept the performance consistently when tested on multiple cores for long time while the x86\_64 tested CPUs slowed down quickly after CPU got overheated (this is well known problem especially with AVX-512).
+
+### Benchmark - Genuine Intel(R) CPU U7300  @ 1.30GHz :
+
+Laptop ultra low voltage x86_64 2010.
+
+```
+matmult_ref              :  63.66 cycles, avg  65.14 cycles,   26.601 MOPS
+matmult_novec            : 112.32 cycles, avg 114.32 cycles,   15.158 MOPS
+matmult_Fpu87            : 168.19 cycles, avg 170.30 cycles,   10.175 MOPS
+matmult_Sse              :  38.87 cycles, avg  40.00 cycles,   43.316 MOPS
+vecmult_ref              :  22.55 cycles, avg  22.97 cycles,   75.441 MOPS
+vecmult_novec            :  22.41 cycles, avg  22.69 cycles,   76.362 MOPS
+vecmult_Fpu87            :  35.89 cycles, avg  36.54 cycles,   47.419 MOPS
+vecmult_Sse              :  10.78 cycles, avg  10.92 cycles,  158.621 MOPS
+vecTmult_ref             :  22.57 cycles, avg  24.03 cycles,   72.103 MOPS
+vecTmult_SseSingles      :  11.96 cycles, avg  12.57 cycles,  137.875 MOPS
+```
 
 ### Benchmark - Intel(R) Core(TM) i7-5557U CPU @ 3.10GHz :
+
+Laptop x86_64.
 
 ```
 matmult_ref              :  22.49 cycles, avg  24.50 cycles,  126.502 MOPS
@@ -73,23 +94,9 @@ vecTmult_Avx256Singles   :   5.25 cycles, avg   5.53 cycles,  560.282 MOPS
 vecTmult_TransFma256     :   2.83 cycles, avg   2.89 cycles, 1073.570 MOPS
 ```
 
-### Benchmark - Qualcomm Technologies, Inc SDM439 @ 2.016GHz :
-
-```
-matmult_ref              : 144.21 cycles, avg 147.32 cycles,   13.554 MOPS
-matmult_novec            : 208.20 cycles, avg 215.46 cycles,    9.313 MOPS
-matmult_Neon             :  94.99 cycles, avg  98.11 cycles,   20.492 MOPS
-matmult_NeonPar2         :  52.17 cycles, avg  54.15 cycles,   37.077 MOPS
-vecmult_ref              :  51.93 cycles, avg  54.09 cycles,   37.105 MOPS
-vecmult_novec            :  88.16 cycles, avg  89.91 cycles,   22.357 MOPS
-vecmult_Neon             :  22.58 cycles, avg  22.67 cycles,   88.722 MOPS
-vecmult_NeonPar2         :  15.81 cycles, avg  15.96 cycles,  126.015 MOPS
-vecTmult_ref             :  83.12 cycles, avg  83.29 cycles,   24.140 MOPS
-vecTmult_Neon            :  21.47 cycles, avg  21.55 cycles,   93.359 MOPS
-vecTmult_NeonPar2        :  15.63 cycles, avg  15.90 cycles,  126.531 MOPS
-```
-
 ### Benchmark - Intel(R) Xeon(R) Platinum 8275CL CPU @ 3.00GHz :
+
+Server x86_64.
 
 ```
 matmult_ref              :  15.84 cycles, avg  15.94 cycles,  188.207 MOPS
@@ -120,6 +127,8 @@ vecTmult_Avx512Singles   :   6.03 cycles, avg   6.29 cycles,  477.300 MOPS
 
 ### Benchmark - AMD EPYC 7R32 @ 2.8GHz :
 
+Server x86_64.
+
 ```
 matmult_ref              :  13.71 cycles, avg  14.27 cycles,  196.140 MOPS
 matmult_novec            :  54.74 cycles, avg  56.92 cycles,   49.190 MOPS
@@ -146,7 +155,9 @@ vecTmult_TransFma256     :   2.10 cycles, avg   2.18 cycles, 1286.653 MOPS
 
 ### Benchmark - Intel(R) Core(TM) i7-1185G7 @ 3.00GHz
 
-clang version 13.0.0-2
+2020 laptop x86_64.
+
+Tested with clang version 13.0.0-2
 
 ```
 matmult_ref              :  22.27 cycles, avg  24.28 cycles,  197.229 MOPS
@@ -175,7 +186,26 @@ vecTmult_TransFma256     :   2.78 cycles, avg   2.99 cycles, 1607.395 MOPS
 vecTmult_Avx512Singles   :   6.45 cycles, avg   6.67 cycles,  719.699 MOPS
 ```
 
+### Benchmark - Qualcomm Technologies, Inc SDM439 @ 2.016GHz :
+
+Mobile aarch64.
+
+```
+matmult_ref              : 144.21 cycles, avg 147.32 cycles,   13.554 MOPS
+matmult_novec            : 208.20 cycles, avg 215.46 cycles,    9.313 MOPS
+matmult_Neon             :  94.99 cycles, avg  98.11 cycles,   20.492 MOPS
+matmult_NeonPar2         :  52.17 cycles, avg  54.15 cycles,   37.077 MOPS
+vecmult_ref              :  51.93 cycles, avg  54.09 cycles,   37.105 MOPS
+vecmult_novec            :  88.16 cycles, avg  89.91 cycles,   22.357 MOPS
+vecmult_Neon             :  22.58 cycles, avg  22.67 cycles,   88.722 MOPS
+vecmult_NeonPar2         :  15.81 cycles, avg  15.96 cycles,  126.015 MOPS
+vecTmult_ref             :  83.12 cycles, avg  83.29 cycles,   24.140 MOPS
+vecTmult_Neon            :  21.47 cycles, avg  21.55 cycles,   93.359 MOPS
+vecTmult_NeonPar2        :  15.63 cycles, avg  15.90 cycles,  126.531 MOPS
+```
+
 ### Benchmark - Graviton2 :
+Server aarch64.
 
 ```
 matmult_ref              :  37.84 cycles, avg  38.37 cycles,   65.017 MOPS
@@ -191,21 +221,22 @@ vecTmult_Neon            :   4.88 cycles, avg   4.92 cycles,  508.234 MOPS
 vecTmult_NeonPar2        :   4.81 cycles, avg   4.93 cycles,  507.268 MOPS
 ```
 
-### Benchmark - Genuine Intel(R) CPU U7300  @ 1.30GHz :
+### Benchmark - Apple M1 Pro @ 3.228GHz:
 
-Ultra low voltage from 2010.
+Apple M1 Pro laptop.
 
 ```
-matmult_ref              :  63.66 cycles, avg  65.14 cycles,   26.601 MOPS
-matmult_novec            : 112.32 cycles, avg 114.32 cycles,   15.158 MOPS
-matmult_Fpu87            : 168.19 cycles, avg 170.30 cycles,   10.175 MOPS
-matmult_Sse              :  38.87 cycles, avg  40.00 cycles,   43.316 MOPS
-vecmult_ref              :  22.55 cycles, avg  22.97 cycles,   75.441 MOPS
-vecmult_novec            :  22.41 cycles, avg  22.69 cycles,   76.362 MOPS
-vecmult_Fpu87            :  35.89 cycles, avg  36.54 cycles,   47.419 MOPS
-vecmult_Sse              :  10.78 cycles, avg  10.92 cycles,  158.621 MOPS
-vecTmult_ref             :  22.57 cycles, avg  24.03 cycles,   72.103 MOPS
-vecTmult_SseSingles      :  11.96 cycles, avg  12.57 cycles,  137.875 MOPS
+matmult_ref              :  11.82 cycles, avg  16.88 cycles,  191.213 MOPS
+matmult_novec            :  34.68 cycles, avg  35.42 cycles,   91.123 MOPS
+matmult_Neon             :   5.52 cycles, avg   6.07 cycles,  531.951 MOPS
+matmult_NeonPar2         :   5.52 cycles, avg   6.06 cycles,  532.289 MOPS
+vecmult_ref              :   3.35 cycles, avg   3.45 cycles,  936.575 MOPS
+vecmult_novec            :   7.59 cycles, avg   7.77 cycles,  415.306 MOPS
+vecmult_Neon             :   1.38 cycles, avg   1.50 cycles, 2145.973 MOPS
+vecmult_NeonPar2         :   1.38 cycles, avg   1.45 cycles, 2231.532 MOPS
+vecTmult_ref             :   7.68 cycles, avg   7.82 cycles,  412.712 MOPS
+vecTmult_Neon            :   1.77 cycles, avg   1.88 cycles, 1715.703 MOPS
+vecTmult_NeonPar2        :   1.87 cycles, avg   1.97 cycles, 1641.646 MOPS
 ```
 
 ## License

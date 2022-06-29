@@ -722,24 +722,46 @@ long readTicks()
 		}
 #elif __APPLE__
 
-		FILE *sysctlFd = popen("sysctl hw.cpufrequency", "r");
-		if (sysctlFd != NULL) {
-			const std::regex keyValueRegex("^([^:]+?)\\s*:\\s*(.*?)\\s*$");
-			char buf[1024];
-			while (fgets(buf, sizeof(buf)-1, sysctlFd) != NULL) {
-				buf[sizeof(buf)-1] = '\0';
-				std::smatch match;
-				if (std::regex_match(std::string(buf), match, keyValueRegex)) {
-					if (match[1] == "hw.cpufrequency") {
-						cpuFrequency = (uint64_t)(stod(match[2], NULL));
-						break;
+		if (cpuFrequency == 0) {
+			FILE *sysctlFd = popen("sysctl hw.cpufrequency", "r");
+			if (sysctlFd != NULL) {
+				const std::regex keyValueRegex("^([^:]+?)\\s*:\\s*(.*?)\\s*$");
+				char buf[1024];
+				while (fgets(buf, sizeof(buf)-1, sysctlFd) != NULL) {
+					buf[sizeof(buf)-1] = '\0';
+					std::smatch match;
+					if (std::regex_match(std::string(buf), match, keyValueRegex)) {
+						if (match[1] == "hw.cpufrequency") {
+							cpuFrequency = (uint64_t)(stod(match[2], NULL));
+							break;
+						}
 					}
 				}
+				pclose(sysctlFd);
 			}
-			pclose(sysctlFd);
+			else {
+				fprintf(stderr, "Failed to read sysctl hw.cpufrequency |\n");
+			}
 		}
-		else {
-			fprintf(stderr, "Failed to read sysctl hw.cpufrequency |\n");
+		if (cpuFrequency == 0) {
+			FILE *powerFd = popen("sudo powermetrics -s cpu_power -n 1", "r");
+			if (powerFd != NULL) {
+				const std::regex keyValueRegex("^CPU \\d+ active residency:.*(?:\\s+|\\()(\\d+(?:\\.\\d+)?)\\s+MHz:.*\\s*$");
+				char buf[1024];
+				while (fgets(buf, sizeof(buf)-1, powerFd) != NULL) {
+					buf[sizeof(buf)-1] = '\0';
+					std::smatch match;
+					if (std::regex_match(std::string(buf), match, keyValueRegex)) {
+						uint64_t frequency = (uint64_t)(stod(match[1], NULL))*1000000;
+						if (frequency > cpuFrequency)
+							cpuFrequency = frequency;
+					}
+				}
+				pclose(powerFd);
+			}
+			else {
+				fprintf(stderr, "Failed to read sudo powermetrics -s cpu_power -n 1");
+			}
 		}
 #endif
 		if (cpuFrequency != 0) {
@@ -758,8 +780,8 @@ void runBenchmark(const char *name, long repeatCount, long innerSize, std::funct
 	static const int nruns = 4096;
 
 	unsigned long long best_time = ~0ull;
-	auto start = std::chrono::system_clock::now();
 	unsigned long long start_time = readTicks();
+	auto start = std::chrono::system_clock::now();
 
 	for (int run = 0; run < nruns; run++) {
 		unsigned long long time = readTicks();
@@ -778,51 +800,104 @@ void runBenchmark(const char *name, long repeatCount, long innerSize, std::funct
 	printf("%-25s: %6.2f cycles, avg %6.2f cycles, %8.3f MOPS\n", name, cycles_per_run, avg_time, (double)nruns*repeatCount*innerSize/duration.count()/1000000);
 }
 
-int main(int argc, char **argv)
-{
-	// matmult variants
-	static const struct {
-		const char *name;
-		void (*matmult)(Mat44 *out, const Mat44 &A, const Mat44 &B);
-	} matmult_variants[] = {
-		{ "matmult_ref",       matmult_ref },
-		{ "matmult_novec",     matmult_novec },
+// matmult variants
+static const struct {
+	const char *name;
+	void (*matmult)(Mat44 *out, const Mat44 &A, const Mat44 &B);
+} matmult_variants[] = {
+	{ "matmult_ref",       matmult_ref },
+	{ "matmult_novec",     matmult_novec },
 #ifdef __x86_64__
-		{ "matmult_Fpu87",     matmult_Fpu87 },
+	{ "matmult_Fpu87",     matmult_Fpu87 },
 #endif
 #ifdef __SSE__
-		{ "matmult_Sse",       matmult_Sse },
+	{ "matmult_Sse",       matmult_Sse },
 #endif
 #ifdef __AVX__
-		{ "matmult_Avx4Mem",   matmult_Avx4Mem },
+	{ "matmult_Avx4Mem",   matmult_Avx4Mem },
 #endif
 #ifdef __AVX__
-		{ "matmult_Avx8",      matmult_Avx8 },
+	{ "matmult_Avx8",      matmult_Avx8 },
 #endif
 #ifdef __FMA__
-		{ "matmult_Fma",       matmult_Fma },
+	{ "matmult_Fma",       matmult_Fma },
 #endif
 #ifdef __FMA__
-		{ "matmult_FmaExp",    matmult_FmaExp },
+	{ "matmult_FmaExp",    matmult_FmaExp },
 #endif
 #ifdef __FMA__
-		{ "matmult_Fma256Exp", matmult_Fma256Exp },
+	{ "matmult_Fma256Exp", matmult_Fma256Exp },
 #endif
 #ifdef __FMA__
-		{ "matmult_Fma256Pre", matmult_Fma256Pre },
+	{ "matmult_Fma256Pre", matmult_Fma256Pre },
 #endif
 #if (defined __AVX512F__)
-		{ "matmult_Avx512",    matmult_Avx512 },
+	{ "matmult_Avx512",    matmult_Avx512 },
 #endif
 #if (defined __aarch64__)
-		{ "matmult_Neon",      matmult_Neon },
-		{ "matmult_NeonPar2",  matmult_NeonPar2 },
+	{ "matmult_Neon",      matmult_Neon },
+	{ "matmult_NeonPar2",  matmult_NeonPar2 },
 #endif
 #ifdef __ARM_FEATURE_SVE
-		{ "matmult_Sve",       matmult_Sve },
+	{ "matmult_Sve",       matmult_Sve },
 #endif
-	};
+};
 
+// vecmult variants
+static const struct {
+	const char *name;
+	void (*vecmult)(Vector4 *out, const Vector4 *in, size_t count, const Mat44 &m);
+} vecmult_variants[] = {
+	{ "vecmult_ref",       vecmult_ref },
+	{ "vecmult_novec",     vecmult_novec },
+#ifdef __x86_64__
+	{ "vecmult_Fpu87",     vecmult_Fpu87 },
+#endif
+#ifdef __SSE__
+	{ "vecmult_Sse",       vecmult_Sse },
+	{ "vecmult_SsePar2",   vecmult_SsePar2 },
+#endif
+#ifdef __FMA__
+	{ "vecmult_FmaExp",    vecmult_FmaExp },
+#endif
+#ifdef __FMA__
+	{ "vecmult_Fma256Exp", vecmult_Fma256Exp },
+#endif
+#if (defined __AVX512F__)
+	{ "vecmult_Avx512",    vecmult_Avx512 },
+#endif
+#if (defined __aarch64__)
+	{ "vecmult_Neon",      vecmult_Neon },
+	{ "vecmult_NeonPar2",  vecmult_NeonPar2 },
+#endif
+};
+
+// vecTmult variants
+static const struct {
+	const char *name;
+	void (*vecTmult)(Vector4 *out, const Mat44 &m, const Vector4 *in, size_t count);
+} vecTmult_variants[] = {
+	{ "vecTmult_ref",           vecTmult_ref },
+#ifdef __SSE__
+	{ "vecTmult_SseSingles",    vecTmult_SseSingles },
+#endif
+#ifdef __AVX__
+	{ "vecTmult_Avx256Singles", vecTmult_Avx256Singles },
+#endif
+#ifdef __AVX__
+	{ "vecTmult_TransFma256",   vecTmult_TransFma256 },
+#endif
+#if (defined __AVX512F__)
+	{ "vecTmult_Avx512Singles", vecTmult_Avx512Singles },
+#endif
+#if (defined __aarch64__)
+	{ "vecTmult_Neon",          vecTmult_Neon },
+	{ "vecTmult_NeonPar2",      vecTmult_NeonPar2 },
+#endif
+};
+
+int runVerification()
+{
 	srand(1234); // deterministic random tests
 
 	// matmult correctness tests, all should provide the same result as reference
@@ -854,59 +929,6 @@ int main(int argc, char **argv)
 	}
 
 	printf("matmult correctness ok.\n");
-
-	// vecmult variants
-	static const struct {
-		const char *name;
-		void (*vecmult)(Vector4 *out, const Vector4 *in, size_t count, const Mat44 &m);
-	} vecmult_variants[] = {
-		{ "vecmult_ref",       vecmult_ref },
-		{ "vecmult_novec",     vecmult_novec },
-#ifdef __x86_64__
-		{ "vecmult_Fpu87",     vecmult_Fpu87 },
-#endif
-#ifdef __SSE__
-		{ "vecmult_Sse",       vecmult_Sse },
-		{ "vecmult_SsePar2",   vecmult_SsePar2 },
-#endif
-#ifdef __FMA__
-		{ "vecmult_FmaExp",    vecmult_FmaExp },
-#endif
-#ifdef __FMA__
-		{ "vecmult_Fma256Exp", vecmult_Fma256Exp },
-#endif
-#if (defined __AVX512F__)
-		{ "vecmult_Avx512",    vecmult_Avx512 },
-#endif
-#if (defined __aarch64__)
-		{ "vecmult_Neon",      vecmult_Neon },
-		{ "vecmult_NeonPar2",  vecmult_NeonPar2 },
-#endif
-	};
-
-	// vecTmult variants
-	static const struct {
-		const char *name;
-		void (*vecTmult)(Vector4 *out, const Mat44 &m, const Vector4 *in, size_t count);
-	} vecTmult_variants[] = {
-		{ "vecTmult_ref",           vecTmult_ref },
-#ifdef __SSE__
-		{ "vecTmult_SseSingles",    vecTmult_SseSingles },
-#endif
-#ifdef __AVX__
-		{ "vecTmult_Avx256Singles", vecTmult_Avx256Singles },
-#endif
-#ifdef __AVX__
-		{ "vecTmult_TransFma256",   vecTmult_TransFma256 },
-#endif
-#if (defined __AVX512F__)
-		{ "vecTmult_Avx512Singles", vecTmult_Avx512Singles },
-#endif
-#if (defined __aarch64__)
-		{ "vecTmult_Neon",          vecTmult_Neon },
-		{ "vecTmult_NeonPar2",      vecTmult_NeonPar2 },
-#endif
-	};
 
 	srand(1234); // deterministic random tests
 
@@ -946,7 +968,11 @@ int main(int argc, char **argv)
 
 	printf("vecmult correctness ok.\n");
 
+	return 0;
+}
 
+int runBenchmarkSet()
+{
 	static const int muls_per_run = 16;
 
 	Mat44 Aperf, ATperf, Bperf, out;
@@ -968,6 +994,23 @@ int main(int argc, char **argv)
 	for (size_t i = 0; i < sizeof(vecTmult_variants)/sizeof(vecTmult_variants[0]); i++) {
 		runBenchmark(vecTmult_variants[i].name, 2048, sizeof(vectors)/sizeof(vectors[0]), [i, vectors, &vectorsOut, ATperf](){ vecTmult_variants[i].vecTmult(vectorsOut, ATperf, vectors, sizeof(vectors)/sizeof(vectors[0])); });
 	}
+	return 0;
+}
 
+int main(int argc, char **argv)
+{
+	long count = 1;
+	if (argc > 1) {
+		if ((count = (long) atof(argv[1])) == 0) {
+			fprintf(stderr, "Usage: %s [count]\n", argv[0]);
+		}
+	}
+	int err;
+	if ((err = runVerification()) != 0) {
+		return err;
+	}
+	for (long i = 0; i < count; ++i) {
+		runBenchmarkSet();
+	}
 	return 0;
 }
