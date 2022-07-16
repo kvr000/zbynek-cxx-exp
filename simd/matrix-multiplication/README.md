@@ -36,6 +36,9 @@ The variants were:
 - Neon: aarch64, using multiply-add
 - NeonPar2: aarch64, using multiply-add, two vectors in parallel (or two rows of matrix in parallel, as long as compiler is smart enough to interlace)
 - Neon (vecTmult): aarch64, using vaddvq\_f32
+- SveRows: aarch64, matrix multiplication based on per-row multiplication.
+- SveSingle: aarch64, matrix multiplication based on all rows at once.
+- Sve (vecmult): aarch64, vector multiplication, all array elements at once.
 
 Observations:
 
@@ -47,8 +50,10 @@ Observations:
 - For ARM64, vaddvq\_f32 seems to be good enough to eliminate disadvantages of column-major matrix, performing similarly to row-major matrix multiplication.  This may change with SVE or SVE2 though.
 - Compiler (depending on version and brand) may require some help in order to expand loops and not to worry about overwriting output and input memory.  In some cases, Par2 versions interlacing vector calculations can give 80% boost.  This could be further optimized manually if separating inputs is not enough for compiler to interlace calculations of two or more vectors.
 - Comparing x86\_64 and aarch64, vfmaq\_laneq\_f32 (FMLA with lane instruction) brings benefit which x86\_64 is terribly missing.  Not only it saves instructions but it also saves temporary registers and allows computing full matrix multiplication in just eleven registers while still interlacing the rows in parallel, therefore naturally avoiding execution conflicts.  On the other hand, x86\_64 makes it easy to take operation argument directly from memory with little to no penalty which makes pre-fetching arguments less important.
-- aarch64 by desktop Apple M1 Pro is narrow winner among all measured CPUs while aarch64 by server Amazon Graviton2 is actually 2.5 times slower per clock.  Comparing ref and novec, it seems M1 Pro is much better in SIMD parallelization than Graviton2.
+- aarch64 by desktop Apple M1 Pro is narrow winner among all measured CPUs (except SVE, see later) while aarch64 by server Amazon Graviton2 is actually 2.5 times slower per clock.  Comparing ref and novec, it seems M1 Pro is much better in SIMD parallelization than Graviton2.
 - aarch64 tested CPUs kept the performance consistently when tested on multiple cores for long time while the x86\_64 tested CPUs slowed down quickly after CPU got overheated (this is well known problem especially with AVX-512).
+- aarch64 SVE extension makes huge difference for arrays of vectors and matrix multiplication, calculating one vector multiplied by matrix in 0.40-0.50 cycles only, 5249 MOPS in total.  The best and average numbers differ by 20% though and even more for matrix multiplication, making Apple M1 Neon code faster than Graviton 3 SVE code (only for matrix multiplication).
+
 
 ### Benchmark - Genuine Intel(R) CPU U7300  @ 1.30GHz :
 
@@ -205,6 +210,7 @@ vecTmult_NeonPar2        :  15.63 cycles, avg  15.90 cycles,  126.531 MOPS
 ```
 
 ### Benchmark - Graviton2 :
+
 Server aarch64.
 
 ```
@@ -219,6 +225,27 @@ vecmult_NeonPar2         :   3.36 cycles, avg   3.46 cycles,  721.872 MOPS
 vecTmult_ref             :   6.94 cycles, avg   6.98 cycles,  358.082 MOPS
 vecTmult_Neon            :   4.88 cycles, avg   4.92 cycles,  508.234 MOPS
 vecTmult_NeonPar2        :   4.81 cycles, avg   4.93 cycles,  507.268 MOPS
+```
+
+### Benchmark - Graviton3 :
+
+Server aarch64.  Performance less stable, not sure whether because of competing threads in cloud environments or overheating.
+
+```
+matmult_ref              :  21.97 cycles, avg  22.67 cycles,  110.261 MOPS
+matmult_novec            :  34.18 cycles, avg  34.81 cycles,   71.806 MOPS
+matmult_Neon             :   7.93 cycles, avg   9.36 cycles,  267.163 MOPS
+matmult_NeonPar2         :   7.93 cycles, avg   9.35 cycles,  267.375 MOPS
+matmult_SveRows          :  10.38 cycles, avg  15.37 cycles,  169.186 MOPS
+matmult_SveSingle        :   4.44 cycles, avg   7.04 cycles,  369.560 MOPS
+vecmult_ref              :   3.28 cycles, avg   3.86 cycles,  647.590 MOPS
+vecmult_novec            :   6.56 cycles, avg   6.73 cycles,  371.362 MOPS
+vecmult_Neon             :   1.91 cycles, avg   2.30 cycles, 1087.943 MOPS
+vecmult_NeonPar2         :   1.91 cycles, avg   2.27 cycles, 1102.215 MOPS
+vecmult_Sve              :   0.40 cycles, avg   0.48 cycles, 5411.007 MOPS
+vecTmult_ref             :   3.89 cycles, avg   4.49 cycles,  556.166 MOPS
+vecTmult_Neon            :   2.67 cycles, avg   3.00 cycles,  832.577 MOPS
+vecTmult_NeonPar2        :   2.59 cycles, avg   2.92 cycles,  855.339 MOPS
 ```
 
 ### Benchmark - Apple M1 Pro @ 3.228GHz:
@@ -238,6 +265,20 @@ vecTmult_ref             :   7.68 cycles, avg   7.82 cycles,  412.712 MOPS
 vecTmult_Neon            :   1.77 cycles, avg   1.88 cycles, 1715.703 MOPS
 vecTmult_NeonPar2        :   1.87 cycles, avg   1.97 cycles, 1641.646 MOPS
 ```
+
+### Build:
+
+```
+sudo apt -y update && sudo apt -y install cmake g++ git
+
+git clone https://github.com/kvr000/zbynek-cxx-exp/
+cd zbynek-cxx-exp/simd/matrix-multiplication
+
+cmake .
+make -j2
+./target/bin/MatrixMultiplicationBenchmark
+```
+
 
 ## License
 

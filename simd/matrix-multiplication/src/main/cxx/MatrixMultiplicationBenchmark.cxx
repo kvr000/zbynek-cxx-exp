@@ -568,22 +568,23 @@ void vecTmult_NeonPar2(Vector4 *out, const Mat44 &m, const Vector4 *in, size_t c
 
 #ifdef __ARM_FEATURE_SVE
 // SVE based:
-void matmult_Sve(Mat44 *out, const Mat44 &A, const Mat44 &B)
+
+void matmult_SveRows(Mat44 *out, const Mat44 &A, const Mat44 &B)
 {
-	int n = 4;
-	// these are the columns A
+	const size_t n = 4;
+	// these are the rows A
 	svfloat32_t A0;
 	svfloat32_t A1;
 	svfloat32_t A2;
 	svfloat32_t A3;
 
-	// these are the columns B
+	// these are the rows B
 	svfloat32_t B0;
 	svfloat32_t B1;
 	svfloat32_t B2;
 	svfloat32_t B3;
 
-	// these are the columns C
+	// these are the rows C
 	svfloat32_t C0;
 	svfloat32_t C1;
 	svfloat32_t C2;
@@ -591,10 +592,10 @@ void matmult_Sve(Mat44 *out, const Mat44 &A, const Mat44 &B)
 
 	svbool_t pred = svwhilelt_b32_u32(0, n);
 
-	A0 = svld1_f32(pred, &A.row[0][0]);
-	A1 = svld1_f32(pred, &A.row[1][0]);
-	A2 = svld1_f32(pred, &A.row[2][0]);
-	A3 = svld1_f32(pred, &A.row[3][0]);
+	B0 = svld1_f32(pred, &B.row[0][0]);
+	B1 = svld1_f32(pred, &B.row[1][0]);
+	B2 = svld1_f32(pred, &B.row[2][0]);
+	B3 = svld1_f32(pred, &B.row[3][0]);
 
 	// Zero accumulators for C values
 	C0 = svdup_n_f32(0);
@@ -602,35 +603,105 @@ void matmult_Sve(Mat44 *out, const Mat44 &A, const Mat44 &B)
 	C2 = svdup_n_f32(0);
 	C3 = svdup_n_f32(0);
 
-	// Multiply accumulate in 4x1 blocks, that is each column in C
-	B0 = svld1rq_f32(svptrue_b32(), &B.row[0][0]);
-	C0 = svmla_lane_f32(C0, A0, B0, 0);
-	C0 = svmla_lane_f32(C0, A1, B0, 1);
-	C0 = svmla_lane_f32(C0, A2, B0, 2);
-	C0 = svmla_lane_f32(C0, A3, B0, 3);
-	svst1_f32(pred, &out->row[0][0], C0);    
+	// Multiply accumulate in 4x1 blocks, that is each row in C
+	A0 = svld1rq_f32(svptrue_b32(), &A.row[0][0]);
+	C0 = svmla_lane_f32(C0, B0, A0, 0);
+	C0 = svmla_lane_f32(C0, B1, A0, 1);
+	C0 = svmla_lane_f32(C0, B2, A0, 2);
+	C0 = svmla_lane_f32(C0, B3, A0, 3);
+	svst1_f32(pred, &out->row[0][0], C0);
 
-	B1 = svld1rq_f32(svptrue_b32(), &B.row[1][0]);
-	C1 = svmla_lane_f32(C1, A0, B1, 0);
-	C1 = svmla_lane_f32(C1, A1, B1, 1);
-	C1 = svmla_lane_f32(C1, A2, B1, 2);
-	C1 = svmla_lane_f32(C1, A3, B1, 3);
+	A1 = svld1rq_f32(svptrue_b32(), &A.row[1][0]);
+	C1 = svmla_lane_f32(C1, B0, A1, 0);
+	C1 = svmla_lane_f32(C1, B1, A1, 1);
+	C1 = svmla_lane_f32(C1, B2, A1, 2);
+	C1 = svmla_lane_f32(C1, B3, A1, 3);
 	svst1_f32(pred, &out->row[1][0], C1);
 
-	B2 = svld1rq_f32(svptrue_b32(), &B.row[2][0]);
-	C2 = svmla_lane_f32(C2, A0, B2, 0);
-	C2 = svmla_lane_f32(C2, A1, B2, 1);
-	C2 = svmla_lane_f32(C2, A2, B2, 2);
-	C2 = svmla_lane_f32(C2, A3, B2, 3);
+	A2 = svld1rq_f32(svptrue_b32(), &A.row[2][0]);
+	C2 = svmla_lane_f32(C2, B0, A2, 0);
+	C2 = svmla_lane_f32(C2, B1, A2, 1);
+	C2 = svmla_lane_f32(C2, B2, A2, 2);
+	C2 = svmla_lane_f32(C2, B3, A2, 3);
 	svst1_f32(pred, &out->row[2][0], C2);
 
-	B3 = svld1rq_f32(svptrue_b32(), &B.row[3][0]);
-	C3 = svmla_lane_f32(C3, A0, B3, 0);
-	C3 = svmla_lane_f32(C3, A1, B3, 1);
-	C3 = svmla_lane_f32(C3, A2, B3, 2);
-	C3 = svmla_lane_f32(C3, A3, B3, 3);
+	A3 = svld1rq_f32(svptrue_b32(), &A.row[3][0]);
+	C3 = svmla_lane_f32(C3, B0, A3, 0);
+	C3 = svmla_lane_f32(C3, B1, A3, 1);
+	C3 = svmla_lane_f32(C3, B2, A3, 2);
+	C3 = svmla_lane_f32(C3, B3, A3, 3);
 	svst1_f32(pred, &out->row[3][0], C3);
 }
+
+void matmult_SveSingle(Mat44 *out, const Mat44 &A, const Mat44 &B)
+{
+	// we have 4 rows, 4*4 floats
+	const size_t n = 4;
+
+	// these are the rows A
+	svfloat32_t A0;
+	svfloat32_t A1;
+	svfloat32_t A2;
+	svfloat32_t A3;
+
+	// these are the rows B
+	svfloat32_t B0;
+	svfloat32_t B1;
+	svfloat32_t B2;
+	svfloat32_t B3;
+
+	// this is full result
+	svfloat32_t Ca;
+
+	svbool_t pred = svwhilelt_b32_u32(0, n);
+
+	B0 = svld1_f32(svptrue_b32(), &B.row[0][0]);
+	B1 = svld1_f32(svptrue_b32(), &B.row[1][0]);
+	B2 = svld1_f32(svptrue_b32(), &B.row[2][0]);
+	B3 = svld1_f32(svptrue_b32(), &B.row[3][0]);
+
+	// Multiply accumulate in 4x1 blocks, that is each row in C
+	A0 = svld1rq_f32(pred, &A.row[0][0]);
+	Ca = svmul_lane_f32(B0, A0, 0);
+	Ca = svmla_lane_f32(Ca, B1, A0, 1);
+	Ca = svmla_lane_f32(Ca, B2, A0, 2);
+	Ca = svmla_lane_f32(Ca, B3, A0, 3);
+	svst1_f32(pred, &out->row[0][0], Ca);
+}
+
+void vecmult_Sve(Vector4 *out, const Vector4 *in, size_t count, const Mat44 &m)
+{
+	const size_t n = count;
+
+	// these are the rows M
+	svfloat32_t M0;
+	svfloat32_t M1;
+	svfloat32_t M2;
+	svfloat32_t M3;
+
+	// these are the rows B
+	svfloat32_t A0;
+
+	// these are the rows C
+	svfloat32_t C0;
+
+	svbool_t pred = svwhilelt_b32_u32(0, n);
+
+	M0 = svld1rq_f32(svptrue_b32(), &m.row[0][0]);
+	M1 = svld1rq_f32(svptrue_b32(), &m.row[1][0]);
+	M2 = svld1rq_f32(svptrue_b32(), &m.row[2][0]);
+	M3 = svld1rq_f32(svptrue_b32(), &m.row[3][0]);
+
+	A0 = svld1_f32(pred, &in[0].row[0]);
+
+	// Multiply accumulate in 4x1 blocks, that is each row in C
+	C0 = svmul_lane_f32(M0, A0, 0);
+	C0 = svmla_lane_f32(C0, M1, A0, 1);
+	C0 = svmla_lane_f32(C0, M2, A0, 2);
+	C0 = svmla_lane_f32(C0, M3, A0, 3);
+	svst1_f32(pred, &out[0].row[0], C0);
+}
+
 #endif
 
 
@@ -768,7 +839,7 @@ long readTicks()
 			fprintf(stderr, "Found CPU Frequency %.0f\n", (double) cpuFrequency);
 		}
 		else {
-			cpuFrequency = 2500000000;
+			cpuFrequency = 2600000000;
 			fprintf(stderr, "Failed to find CPU frequency, defaulting to %.3f\n", (double) cpuFrequency);
 		}
 	}
@@ -839,7 +910,8 @@ static const struct {
 	{ "matmult_NeonPar2",  matmult_NeonPar2 },
 #endif
 #ifdef __ARM_FEATURE_SVE
-	{ "matmult_Sve",       matmult_Sve },
+	{ "matmult_SveRows",   matmult_SveRows },
+	{ "matmult_SveSingle", matmult_SveSingle },
 #endif
 };
 
@@ -869,6 +941,9 @@ static const struct {
 #if (defined __aarch64__)
 	{ "vecmult_Neon",      vecmult_Neon },
 	{ "vecmult_NeonPar2",  vecmult_NeonPar2 },
+#endif
+#if (defined __ARM_FEATURE_SVE)
+	{ "vecmult_Sve",       vecmult_Sve },
 #endif
 };
 
