@@ -476,6 +476,44 @@ void matmult_NeonPar2(Mat44 *out, const Mat44 &A, const Mat44 &B)
 	out->row[3] = vectorMultiplyMatrix_Neon(a3, b0, b1, b2, b3);
 }
 
+void matmult_NeonPar4(Mat44 *out, const Mat44 &A, const Mat44 &B)
+{
+	float32x4_t b0 = B.row[0];
+	float32x4_t b1 = B.row[1];
+	float32x4_t b2 = B.row[2];
+	float32x4_t b3 = B.row[3];
+
+	float32x4_t a0 = A.row[0];
+	float32x4_t a1 = A.row[1];
+	float32x4_t a2 = A.row[2];
+	float32x4_t a3 = A.row[3];
+
+	float32x4_t c0 = vmulq_laneq_f32(b0, a0, 0);
+	float32x4_t c1 = vmulq_laneq_f32(b0, a1, 0);
+	float32x4_t c2 = vmulq_laneq_f32(b0, a2, 0);
+	float32x4_t c3 = vmulq_laneq_f32(b0, a3, 0);
+
+	c0 = vfmaq_laneq_f32(c0, b1, a0, 1);
+	c1 = vfmaq_laneq_f32(c1, b1, a1, 1);
+	c2 = vfmaq_laneq_f32(c2, b1, a2, 1);
+	c3 = vfmaq_laneq_f32(c3, b1, a3, 1);
+
+	c0 = vfmaq_laneq_f32(c0, b2, a0, 2);
+	c1 = vfmaq_laneq_f32(c1, b2, a1, 2);
+	c2 = vfmaq_laneq_f32(c2, b2, a2, 2);
+	c3 = vfmaq_laneq_f32(c3, b2, a3, 2);
+
+	c0 = vfmaq_laneq_f32(c0, b3, a0, 3);
+	c1 = vfmaq_laneq_f32(c1, b3, a1, 3);
+	c2 = vfmaq_laneq_f32(c2, b3, a2, 3);
+	c3 = vfmaq_laneq_f32(c3, b3, a3, 3);
+
+	out->row[0] = c0;
+	out->row[1] = c1;
+	out->row[2] = c2;
+	out->row[3] = c3;
+}
+
 void vecmult_Neon(Vector4 *out, const Vector4 *in, size_t count, const Mat44 &m)
 {
 	float32x4_t b0 = m.row[0];
@@ -908,6 +946,7 @@ static const struct {
 #if (defined __aarch64__)
 	{ "matmult_Neon",      matmult_Neon },
 	{ "matmult_NeonPar2",  matmult_NeonPar2 },
+	{ "matmult_NeonPar4",  matmult_NeonPar4 },
 #endif
 #ifdef __ARM_FEATURE_SVE
 	{ "matmult_SveRows",   matmult_SveRows },
@@ -1002,8 +1041,7 @@ int runVerification()
 			}
 		}
 	}
-
-	printf("matmult correctness ok.\n");
+	fprintf(stderr, "matmult correctness ok.\n");
 
 	srand(1234); // deterministic random tests
 
@@ -1040,8 +1078,7 @@ int runVerification()
 			}
 		}
 	}
-
-	printf("vecmult correctness ok.\n");
+	fprintf(stderr, "vecmult correctness ok.\n");
 
 	return 0;
 }

@@ -35,6 +35,7 @@ The variants were:
 - TransFma256: x86\_64 FMA multiply-add with transposing matrix first, 8 elements at time, 2 vectors at time
 - Neon: aarch64, using multiply-add
 - NeonPar2: aarch64, using multiply-add, two vectors in parallel (or two rows of matrix in parallel, as long as compiler is smart enough to interlace)
+- NeonPar4: aarch64, using multiply-add, four vectors in parallel (or four rows of matrix in parallel, explicitly)
 - Neon (vecTmult): aarch64, using vaddvq\_f32
 - SveRows: aarch64, matrix multiplication based on per-row multiplication.
 - SveSingle: aarch64, matrix multiplication based on all rows at once.
@@ -253,17 +254,18 @@ vecTmult_NeonPar2        :   2.59 cycles, avg   2.92 cycles,  855.339 MOPS
 Apple M1 Pro laptop.
 
 ```
-matmult_ref              :  11.82 cycles, avg  16.88 cycles,  191.213 MOPS
-matmult_novec            :  34.68 cycles, avg  35.42 cycles,   91.123 MOPS
-matmult_Neon             :   5.52 cycles, avg   6.07 cycles,  531.951 MOPS
-matmult_NeonPar2         :   5.52 cycles, avg   6.06 cycles,  532.289 MOPS
-vecmult_ref              :   3.35 cycles, avg   3.45 cycles,  936.575 MOPS
-vecmult_novec            :   7.59 cycles, avg   7.77 cycles,  415.306 MOPS
-vecmult_Neon             :   1.38 cycles, avg   1.50 cycles, 2145.973 MOPS
-vecmult_NeonPar2         :   1.38 cycles, avg   1.45 cycles, 2231.532 MOPS
-vecTmult_ref             :   7.68 cycles, avg   7.82 cycles,  412.712 MOPS
-vecTmult_Neon            :   1.77 cycles, avg   1.88 cycles, 1715.703 MOPS
-vecTmult_NeonPar2        :   1.87 cycles, avg   1.97 cycles, 1641.646 MOPS
+matmult_ref              :  12.61 cycles, avg  17.24 cycles,  187.191 MOPS
+matmult_novec            :  24.43 cycles, avg  25.46 cycles,  126.750 MOPS
+matmult_Neon             :   5.52 cycles, avg   6.12 cycles,  527.270 MOPS
+matmult_NeonPar2         :   5.52 cycles, avg   6.16 cycles,  524.206 MOPS
+matmult_NeonPar4         :   5.52 cycles, avg   6.10 cycles,  529.484 MOPS
+vecmult_ref              :   3.35 cycles, avg   3.51 cycles,  918.997 MOPS
+vecmult_novec            :   5.91 cycles, avg   6.22 cycles,  518.622 MOPS
+vecmult_Neon             :   1.38 cycles, avg   1.52 cycles, 2120.846 MOPS
+vecmult_NeonPar2         :   1.38 cycles, avg   1.46 cycles, 2214.777 MOPS
+vecTmult_ref             :   7.29 cycles, avg   7.50 cycles,  430.458 MOPS
+vecTmult_Neon            :   1.77 cycles, avg   1.91 cycles, 1690.740 MOPS
+vecTmult_NeonPar2        :   1.87 cycles, avg   1.99 cycles, 1618.251 MOPS
 ```
 
 ### Build:
