@@ -877,7 +877,7 @@ long readTicks()
 			fprintf(stderr, "Found CPU Frequency %.0f\n", (double) cpuFrequency);
 		}
 		else {
-			cpuFrequency = 2600000000;
+			cpuFrequency = 2800000000;
 			fprintf(stderr, "Failed to find CPU frequency, defaulting to %.3f\n", (double) cpuFrequency);
 		}
 	}

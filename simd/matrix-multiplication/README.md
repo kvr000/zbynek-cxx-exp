@@ -53,10 +53,9 @@ Observations:
 - Comparing x86\_64 and aarch64, vfmaq\_laneq\_f32 (FMLA with lane instruction) brings benefit which x86\_64 is terribly missing.  Not only it saves instructions but it also saves temporary registers and allows computing full matrix multiplication in just eleven registers while still interlacing the rows in parallel, therefore naturally avoiding execution conflicts.  On the other hand, x86\_64 makes it easy to take operation argument directly from memory with little to no penalty which makes pre-fetching arguments less important.
 - aarch64 by desktop Apple M1 Pro is narrow winner among all measured CPUs (except SVE, see later) while aarch64 by server Amazon Graviton2 is actually 2.5 times slower per clock.  Comparing ref and novec, it seems M1 Pro is much better in SIMD parallelization than Graviton2.
 - aarch64 tested CPUs kept the performance consistently when tested on multiple cores for long time while the x86\_64 tested CPUs slowed down quickly after CPU got overheated (this is well known problem especially with AVX-512).
-- aarch64 SVE extension makes huge difference for arrays of vectors and matrix multiplication, calculating one vector multiplied by matrix in 0.40-0.50 cycles only, 5249 MOPS in total.  The best and average numbers differ by 20% though and even more for matrix multiplication, making Apple M1 Neon code faster than Graviton 3 SVE code (only for matrix multiplication).
+- aarch64 SVE2 extension makes vector array multiplication impressively fast - only 0.26 clock, in comparison to Neon where it takes 1.62 clock.  Matrix multiplication is faster too, though only by 40% as it's single operation only.  The best and average numbers differ by 20% though and even more for matrix multiplication.
 
-
-### Benchmark - Genuine Intel(R) CPU U7300  @ 1.30GHz :
+### Benchmark - Genuine Intel(R) CPU U7300  @ 1.30GHz
 
 Laptop ultra low voltage x86_64 2010.
 
@@ -73,7 +72,7 @@ vecTmult_ref             :  22.57 cycles, avg  24.03 cycles,   72.103 MOPS
 vecTmult_SseSingles      :  11.96 cycles, avg  12.57 cycles,  137.875 MOPS
 ```
 
-### Benchmark - Intel(R) Core(TM) i7-5557U CPU @ 3.10GHz :
+### Benchmark - Intel(R) Core(TM) i7-5557U CPU @ 3.10GHz
 
 Laptop x86_64.
 
@@ -100,7 +99,7 @@ vecTmult_Avx256Singles   :   5.25 cycles, avg   5.53 cycles,  560.282 MOPS
 vecTmult_TransFma256     :   2.83 cycles, avg   2.89 cycles, 1073.570 MOPS
 ```
 
-### Benchmark - Intel(R) Xeon(R) Platinum 8275CL CPU @ 3.00GHz :
+### Benchmark - Intel(R) Xeon(R) Platinum 8275CL CPU @ 3.00GHz
 
 Server x86_64.
 
@@ -131,7 +130,7 @@ vecTmult_TransFma256     :   2.67 cycles, avg   2.68 cycles, 1118.091 MOPS
 vecTmult_Avx512Singles   :   6.03 cycles, avg   6.29 cycles,  477.300 MOPS
 ```
 
-### Benchmark - AMD EPYC 7R32 @ 2.8GHz :
+### Benchmark - AMD EPYC 7R32 @ 2.8GHz
 
 Server x86_64.
 
@@ -192,7 +191,7 @@ vecTmult_TransFma256     :   2.78 cycles, avg   2.99 cycles, 1607.395 MOPS
 vecTmult_Avx512Singles   :   6.45 cycles, avg   6.67 cycles,  719.699 MOPS
 ```
 
-### Benchmark - Qualcomm Technologies, Inc SDM439 @ 2.016GHz :
+### Benchmark - Qualcomm Technologies, Inc SDM439 @ 2.016GHz
 
 Mobile aarch64.
 
@@ -249,7 +248,29 @@ vecTmult_Neon            :   2.67 cycles, avg   3.00 cycles,  832.577 MOPS
 vecTmult_NeonPar2        :   2.59 cycles, avg   2.92 cycles,  855.339 MOPS
 ```
 
-### Benchmark - Apple M1 Pro @ 3.228GHz:
+### Benchmark - Graviton4
+
+Server aarch64.
+
+```
+matmult_ref              :  23.24 cycles, avg  23.68 cycles,  118.231 MOPS
+matmult_novec            :  24.61 cycles, avg  26.60 cycles,  105.273 MOPS
+matmult_Neon             :   6.84 cycles, avg   7.93 cycles,  353.232 MOPS
+matmult_NeonPar2         :   6.84 cycles, avg   7.92 cycles,  353.559 MOPS
+matmult_NeonPar4         :   6.84 cycles, avg   7.93 cycles,  353.223 MOPS
+matmult_SveRows          :   7.52 cycles, avg  10.59 cycles,  264.391 MOPS
+matmult_SveSingle        :   4.10 cycles, avg   5.15 cycles,  544.217 MOPS
+vecmult_ref              :   4.70 cycles, avg   4.75 cycles,  589.779 MOPS
+vecmult_novec            :   5.81 cycles, avg   5.89 cycles,  475.095 MOPS
+vecmult_Neon             :   1.71 cycles, avg   1.96 cycles, 1426.544 MOPS
+vecmult_NeonPar2         :   1.62 cycles, avg   1.95 cycles, 1433.017 MOPS
+vecmult_Sve              :   0.26 cycles, avg   0.37 cycles, 7666.489 MOPS
+vecTmult_ref             :   4.70 cycles, avg   4.81 cycles,  582.087 MOPS
+vecTmult_Neon            :   2.31 cycles, avg   2.65 cycles, 1055.110 MOPS
+vecTmult_NeonPar2        :   2.14 cycles, avg   2.58 cycles, 1087.370 MOPS
+```
+
+### Benchmark - Apple M1 Pro @ 3.228GHz
 
 Apple M1 Pro laptop.
 
